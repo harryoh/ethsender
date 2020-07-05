@@ -1,0 +1,16 @@
+{
+  "name": "transfer-worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "node node_modules/nodemon/bin/nodemon app"
+  },
+  "dependencies": {
+    "bull": "^3.15.0",
+    "dotenv": "^8.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}
