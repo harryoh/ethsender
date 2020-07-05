@@ -3,12 +3,17 @@
 const express = require('express'),
       bodyParser = require('body-parser'),
       morgan = require('morgan'),
-      Queue = require('bull');
+      Queue = require('bull'),
+      Arena = require('bull-arena');
 
 const config = require('./environment');
 
 const app = express();
-const reqQueue = new Queue('SendRequest', `redis://${config.REDIS_HOST}:6379`);
+const REDIS_URL = `redis://${config.REDIS_HOST}:${config.REDIS_PORT}`;
+const queueNames = ['SendRequest', 'SendTx'];
+
+const reqQueue = new Queue(queueNames[0], REDIS_URL);
+const txQueue = new Queue(queueNames[1], REDIS_URL);
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -75,6 +80,22 @@ router.route('/job')
   })
 
 app.use('/api', router);
+
+const arena = Arena({
+  queues: queueNames.map(q => ({
+      name: q,
+      hostId: 'redis',
+      redis: {
+        port: config.REDIS_PORT,
+        host: config.REDIS_HOST
+      }
+  })),
+}, {
+  basePath: '/arena',
+  disableListen: true
+});
+
+app.use('/', arena);
 
 var server = app.listen( port, () => {
   console.log('Listening on port ' + server.address().port);
