@@ -1,0 +1,13 @@
+FROM node:12-alpine
+
+WORKDIR /usr/src/app
+
+COPY nodeserver/package*.json ./
+
+RUN npm install
+
+COPY ./nodeserver/ .
+
+EXPOSE 8080
+
+CMD [ "npm", "start" ]

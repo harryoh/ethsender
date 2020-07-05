@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  redis:
+    restart: always
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  nodeserver:
+    restart: always
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-nodeserver
+    command: ["/usr/local/bin/npm", "run", "dev",]
+    volumes:
+      - ./nodeserver/:/usr/src/app/
+    ports:
+      - "50080:50080"
+    depends_on:
+      - redis
