@@ -20,13 +20,24 @@ services:
     depends_on:
       - redis
 
+  transferworker:
+    restart: always
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-transferworker
+    command: ["/usr/local/bin/npm", "run", "dev",]
+    volumes:
+      - ./transferworker/:/usr/src/app/
+    depends_on:
+      - nodeserver
+
   # transferworker:
   #   restart: always
   #   build:
   #     context: .
-  #     dockerfile: docker/Dockerfile-transferworker
+  #     dockerfile: docker/Dockerfile-monitorworker
   #   command: ["/usr/local/bin/npm", "run", "dev",]
   #   volumes:
-  #     - ./transferworker/:/usr/src/app/
-  #   depends_on:
+  #     - ./monitorworker/:/usr/src/app/
+  #   depends_on
   #     - nodeserver

@@ -1,0 +1,19 @@
+{
+  "name": "transferworker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "node node_modules/nodemon/bin/nodemon app"
+  },
+  "dependencies": {
+    "ansicolor": "^1.1.93",
+    "axios": "^0.19.2",
+    "bull": "^3.15.0",
+    "ololog": "^1.1.156",
+    "web3": "^1.2.9"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}
