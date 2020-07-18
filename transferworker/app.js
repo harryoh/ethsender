@@ -22,8 +22,8 @@ if (!config.INFURA_ACCESS_TOKEN) {
   process.exit(1);
 }
 
-const endpoint = `${config.ETH_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
-const web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
+const endpoint = `${config.ETH_WS_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
+const web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
 
 log.info(`Ethereum Endpoint is ${endpoint}`);
 

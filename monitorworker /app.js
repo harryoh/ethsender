@@ -20,8 +20,11 @@ if (!config.INFURA_ACCESS_TOKEN) {
   process.exit(1);
 }
 
-const endpoint = `${config.ETH_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
-const web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
+// const endpoint = `${config.ETH_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
+// const web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
+
+const endpoint = `${config.ETH_WS_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
+const web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
 
 log.info(`Ethereum Endpoint is ${endpoint}`);
 
@@ -44,20 +47,61 @@ const initJob = async () => {
   // Job Clear, Read txs from database, Add Queue
 };
 
-const monitorJob = async (job, done) => {
-  log.info(`\nStart a new monitor job!! [id:${job.id}]\n`.blue);
-  log.green(job.data)
+const txSuccess = async (tx) => {
+  return new Promise((resolve, reject) => {
+    if (!tx.blockNumber) {
+      return reject(new Error(`Transaction(${tx.hash}) is not blocked!`));
+    }
+    log.info(`Transaction(${tx.hash}) was confirmed!(BlockNumber: ${tx.blockNumber})`);
+    setTimeout(() => {
+      resolve('SUCCESS');
+    }, 3000);
+  });
+};
 
+const monitorJob = async (job, done) => {
+  log.info(`\nWatching transaction(${job.data.txid})...\n`.blue)
+  if (!await isConnected()) {
+    if (!await isConnected()) {
+      let errmsg = `Connection error with infura.(${endpoint})`
+      log.error(`Error: ${errmsg}`.red);
+      return done(new Error(`{ error: ${errmsg} }`));
+    }
+  }
   const txn = await web3.eth.getTransaction(job.data.txid)
-  if (txn.blockNumber === null) {
-    // Wait for confirming.
-    // Use WebSocket
+  if (txn.blockNumber) {
+    try {
+      await txSuccess(txn);
+    } catch (error) {
+      log.error(error);
+      return done(error);
+    }
+    return done();
   }
 
-  console.log(txn.blockNumber);
-
-  // Write to Database
-  done();
+  const subscription = web3.eth.subscribe('newBlockHeaders')
+  subscription.on("error", (error) => {
+    log.error(error);
+    return done(error);
+  });
+  subscription.on('data', async (blockHeader) => {
+    log.info(`A new block was generated!(${blockHeader.number})`);
+    const tx = await web3.eth.getTransaction(job.data.txid)
+    if (tx.blockNumber) {
+      try {
+        await txSuccess(tx);
+      } catch (error) {
+        log.error(error);
+        return done(error);
+      }
+      subscription.unsubscribe((error, success) => {
+        if (error) {
+          log.error(error);
+        }
+        return done();
+      });
+    }
+  });
 };
 
 const main = async () => {
@@ -67,11 +111,10 @@ const main = async () => {
   }
   log.info('Connection is Successed.');
 
-  initJob();
+  await initJob();
 
   log.info('\nStart watching pendingTx Queue...'.blue);
   txQueue.process(monitorJob);
-
 }
 
 main();

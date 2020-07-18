@@ -53,7 +53,7 @@ router.get('/', (req, res) => {
 //   }
 // ]
 
-router.route('/job')
+router.route('/transfer')
   .get((req, res) => {
     res.json({ message: 'get id:' + req.params.id });
   })

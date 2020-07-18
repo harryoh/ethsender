@@ -8,13 +8,13 @@ const environment = {
   development: {
     CHAIN: 'ropsten',
     ETH_ENDPOINT: 'https://ropsten.infura.io/v3',
-    ETH_WS_ENDPOINT: 'https://ropsten.infura.io/ws/v3',
+    ETH_WS_ENDPOINT: 'wss://ropsten.infura.io/ws/v3',
     FEE_LEVEL: 'high',
   },
   production: {
     CHAIN: 'mainnet',
     ETH_ENDPOINT: 'https://mainnet.infura.io/v3',
-    ETH_WS_ENDPOINT: 'https://mainnet.infura.io/ws/v3',
+    ETH_WS_ENDPOINT: 'wss://mainnet.infura.io/ws/v3',
     FEE_LEVEL: 'low',
   }
 }
