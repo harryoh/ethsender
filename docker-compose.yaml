@@ -7,37 +7,46 @@ services:
     ports:
       - "6379:6379"
 
-  nodeserver:
+  db:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile-nodeserver
-    command: ["/usr/local/bin/npm", "run", "dev",]
-    volumes:
-      - ./nodeserver/:/usr/src/app/
+    image: mariadb:5.5.64
+    env_file:
+      - '.env'
     ports:
-      - "50080:50080"
-    depends_on:
-      - redis
+      - "3306:3306"
 
-  transferworker:
-    restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile-transferworker
-    command: ["/usr/local/bin/npm", "run", "dev",]
-    volumes:
-      - ./transferworker/:/usr/src/app/
-    depends_on:
-      - nodeserver
+  # nodeserver:
+  #   restart: always
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile-nodeserver
+  #   command: ["/usr/local/bin/npm", "run", "dev",]
+  #   volumes:
+  #     - ./nodeserver/:/usr/src/app/
+  #   ports:
+  #     - "50080:50080"
+  #   depends_on:
+  #     - redis
+  #     - db
 
   # transferworker:
   #   restart: always
   #   build:
   #     context: .
-  #     dockerfile: docker/Dockerfile-monitorworker
+  #     dockerfile: docker/Dockerfile-transferworker
   #   command: ["/usr/local/bin/npm", "run", "dev",]
   #   volumes:
-  #     - ./monitorworker/:/usr/src/app/
-  #   depends_on
+  #     - ./transferworker/:/usr/src/app/
+  #   depends_on:
   #     - nodeserver
+
+  monitorworker:
+    restart: always
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-monitorworker
+    command: ["/usr/local/bin/npm", "run", "dev",]
+    volumes:
+      - ./monitorworker/:/usr/src/app/
+    # depends_on:
+    #   # - nodeserver
