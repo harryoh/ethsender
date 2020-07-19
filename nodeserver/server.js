@@ -39,12 +39,43 @@ app.use(require('method-override')());
 
 const port = process.env.PORT || 50080;
 
-var router = express.Router();
+let router = express.Router();
 router.use((req, res, next) => {
   // Log
   // console.log(req.host, req.port, req.url);
   next();
 });
+
+const validateRequest = async (body) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let dbconn, rows;
+      dbconn = await pool.getConnection();
+      for (let i=0; i<body.length; i++) {
+        rows = await dbconn.query('SELECT * FROM wallet_send_list WHERE no=?', [body[i].dbid]);
+        if (!rows.length) {
+          dbconn.end();
+          return reject(new Error(`dbid(${body[i].dbid}) was not found`));
+        }
+
+        if (rows[0].status != STATUS.EMPTY) {
+          dbconn.end();
+          return reject(new Error(`dbid(${body[i].dbid}) status is not EMPTY(status:${rows[0].status})`));
+        }
+
+        if (rows[0].txid) {
+          dbconn.end();
+          return reject(new Error(`dbid(${body[i].dbid}) status already has txid(${rows[0].txid})`));
+        }
+      }
+      dbconn.end();
+    } catch (err) {
+      if (dbconn) dbconn.end();
+      return reject(err);
+    }
+    resolve(body.length);
+  });
+};
 
 router.route('/transfer')
 .post(async (req, res) => {
@@ -53,6 +84,14 @@ router.route('/transfer')
   if (!req.body.length) {
     return res.status(500).json({
       Error: 'Data format are wrong!'
+    });
+  }
+
+  try {
+    await validateRequest(req.body);
+  } catch(err) {
+    return res.status(500).json({
+      Error: err.message,
     });
   }
 
@@ -74,8 +113,9 @@ router.route('/request/:id')
   try {
     dbconn = await pool.getConnection();
     rows = await dbconn.query('SELECT * FROM wallet_send_list WHERE no=?', [req.params.id]);
+    dbconn.end();
     if (!rows.length) {
-      throw(new Error(`The request(no:${req.params.id}) was not found.`));
+      return res.status(404).json({ Error: `The request(no:${req.params.id}) was not found.` });
     }
   } catch (err) {
     if (dbconn) dbconn.end();
@@ -83,7 +123,6 @@ router.route('/request/:id')
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json(rows[0]);
 })
 .put(async (req, res) => {
@@ -96,15 +135,34 @@ router.route('/request/:id')
     values.push(req.params.id);
     const sql = "UPDATE wallet_send_list SET " + columns.join("=?, ") + "=? WHERE no=?";
     rows = await dbconn.query(sql, values);
+    dbconn.end();
+    if (!rows.affectedRows) {
+      return res.status(404).json({ Error: `The request(no:${req.params.id}) was not found.` });
+    }
   } catch (err) {
     if (dbconn) dbconn.end();
     return res.status(500).json({
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json({ message: 'OK' });
 });
+
+router.route('/tx')
+.get(async (req, res) => {
+  let dbconn, rows;
+  try {
+    dbconn = await pool.getConnection();
+    rows = await dbconn.query('SELECT * FROM wallet_send_list');
+    dbconn.end();
+  } catch (err) {
+    if (dbconn) dbconn.end();
+    return res.status(500).json({
+      Error: err.message
+    });
+  }
+  return res.status(200).json(rows);
+})
 
 router.route('/tx/pending')
 .get(async (req, res) => {
@@ -112,13 +170,13 @@ router.route('/tx/pending')
   try {
     dbconn = await pool.getConnection();
     rows = await dbconn.query('SELECT * FROM wallet_send_list WHERE txid != "" and status=?', [STATUS.PENDING]);
+    dbconn.end();
   } catch (err) {
     if (dbconn) dbconn.end();
     return res.status(500).json({
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json(rows);
 })
 
@@ -128,13 +186,13 @@ router.route('/tx/error')
   try {
     dbconn = await pool.getConnection();
     rows = await dbconn.query('SELECT * FROM wallet_send_list WHERE txid != "" and status=?', [STATUS.ERROR]);
+    dbconn.end();
   } catch (err) {
     if (dbconn) dbconn.end();
     return res.status(500).json({
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json(rows);
 })
 
@@ -144,8 +202,8 @@ router.route('/tx/:hash')
   try {
     dbconn = await pool.getConnection();
     rows = await dbconn.query('SELECT * FROM wallet_send_list WHERE txid=?', [req.params.hash]);
+    dbconn.end();
     if (!rows.length) {
-      dbconn.end();
       return res.status(404).json({
         message: `The request(hash:${req.params.hash}) was not found.`
       })
@@ -156,7 +214,6 @@ router.route('/tx/:hash')
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json(rows[0]);
 })
 .put(async (req, res) => {
@@ -169,13 +226,16 @@ router.route('/tx/:hash')
     values.push(req.params.hash);
     const sql = "UPDATE wallet_send_list SET " + columns.join("=?, ") + "=? WHERE txid=?";
     rows = await dbconn.query(sql, values);
+    dbconn.end();
+    if (!rows.affectedRows) {
+      return res.status(404).json({ Error: `The request(no:${req.params.id}) was not found.` });
+    }
   } catch (err) {
     if (dbconn) dbconn.end();
     return res.status(500).json({
       Error: err.message
     });
   }
-  dbconn.end();
   return res.status(200).json({ message: 'OK' });
 });
 

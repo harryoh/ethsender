@@ -1,6 +1,19 @@
-const Queue = require('bull');
+const Queue = require('bull'),
+      Web3 = require('web3'),
+      Tx = require('ethereumjs-tx').Transaction,
+      axios = require('axios'),
+      log = require('ololog').configure({ time: true });
 
+require ('ansicolor').nice
 const config = require('./environment');
+
+const STATUS = {
+  EMPTY: 0,
+  PREPARE: 1,
+  PENDING: 2,
+  COMPLETE: 3,
+  ERROR: 5
+};
 
 const REDIS_URL = `redis://${config.REDIS_HOST}:${config.REDIS_PORT}`;
 const queueNames = ['RequestTx', 'PendingTx'];
@@ -8,17 +21,11 @@ const queueNames = ['RequestTx', 'PendingTx'];
 const reqQueue = new Queue(queueNames[0], REDIS_URL);
 const txQueue = new Queue(queueNames[1], REDIS_URL);
 
-const Web3 = require('web3');
-const Tx = require('ethereumjs-tx').Transaction;
-const axios = require('axios');
-const log = require('ololog').configure({ time: true });
-require ('ansicolor').nice
-
 log.info('\n--Start TransferWorker--\n'.blue);
 
 // Access Token이 없을 경우에는 종료
 if (!config.INFURA_ACCESS_TOKEN) {
-  log.error('Error: "ACCESS_TOKEN" for infura.io is required.'.red);
+  log.error('message: "ACCESS_TOKEN" for infura.io is required.'.red);
   process.exit(1);
 }
 
@@ -71,6 +78,24 @@ const getPrivateKey = () => {
   );
 };
 
+const updateRequest = async (body) => {
+  let tzDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
+  body.modifiedAt = tzDate.toISOString().slice(0, 19).replace('T', ' ');
+  return await axios.put(
+    `${config.NODESERVER_URL}/api/request/${body.no}`,
+    body);
+};
+
+const writeError = async (dbid, message) => {
+  let body = {
+    no: dbid,
+    memo: message,
+    status: STATUS.ERROR
+  };
+
+  return await updateRequest(body);
+};
+
 /*
 * Transaction을 전송하는 Job
 */
@@ -81,13 +106,17 @@ const transferJob = async (job, done) => {
   // 한번의 재접속에도 오류가 발생하면 종료.
   if (!await isConnected()) {
     if (!await isConnected()) {
-      let errmsg = `Connection error with infura.(${endpoint})`
-      log.error(`Error: ${errmsg}`.red);
-      return done(new Error(`{ error: ${errmsg} }`));
+      let errmsg = `Connection error with infura.(${endpoint})`;
+      return done(new Error(`{ message: ${errmsg} }`));
     }
   }
 
   try {
+    let res = await updateRequest({
+      no: job.data.dbid,
+      status: STATUS.PREPARE
+    });
+
     // config.GASPRICE_GET_SECONDS 의 시간이 지나면 GasPrice를 가져옴
     if (!Object.keys(gasPrices).length || (Date.now()-gasPrices['time']) / 1000 > config.GASPRICE_GET_SECONDS) {
       await getCurrentGasPrices();
@@ -108,8 +137,7 @@ const transferJob = async (job, done) => {
 
     if (Number(walletBalance) < Number(job.data.value) + Number(fee)) {
       let errmsg = 'Balance is too low.';
-      log.error(`Error: ${errmsg}`.red);
-      return done(new Error(`{ error: ${errmsg} }`));
+      return done(new Error(`{ message: ${errmsg} }`));
     }
 
     // Nonce값을 가져온다. Block이 되지 않고 Pending된 TX까지 계산함.
@@ -128,8 +156,7 @@ const transferJob = async (job, done) => {
     const acc = web3.eth.accounts.privateKeyToAccount(privateKey.toString('hex'));
     if (acc.address !== job.data.fromAddress) {
       let errmsg = `Private Key is wrong!(address: ${job.data.fromAddress})`;
-      log.error(`Error: ${errmsg}`.red);
-      return done(new Error(`{ error: ${errmsg} }`));
+      return done(new Error(`{ message: ${errmsg} }`));
     }
     log.info(`PrivateKey is validate.\n`);
 
@@ -142,19 +169,17 @@ const transferJob = async (job, done) => {
     tx.sign(privateKey);
     const serializedTx = tx.serialize();
     web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-    .on('transactionHash', function (txid) {
+    .on('transactionHash', async (txid) => {
       return done(null, { txid: txid });
     })
     // .on('receipt', (receipt) => {
     //   console.log("Success: ", receipt);
     //   return done(null, { receipt: receipt });
     // })
-    .on('error', (error) => {
-      log.error(`Error: ${error.message}`.red);
+    .on('error', async (error) => {
       return done(error);
     });
   } catch (error) {
-    log.error(`Error: ${error.message}`.red);
     return done(error);
   }
 };
@@ -176,23 +201,29 @@ const main = async () => {
   reqQueue.on('completed', async (job, result) => {
     log.info('\nTransaction is successed.'.blue);
     let tx = Object.assign(result, job.data);
-    log.info('Result:')
-    log.green(tx);
 
-    // Todo: DB에 상태를 업데이트하기 위해서 API를 호출한다.
-
+    // DB에 상태를 업데이트하기 위해서 API를 호출한다.
+    await updateRequest({
+      no: tx.dbid,
+      status: STATUS.PENDING,
+      txid: tx.txid,
+      memo: ""
+    });
 
     // Transaction을 pendingTx Queue에 넣어 MonitorWorker가 상태를 감시할 수 있도록 한다.
     txJob = await txQueue.add(tx);
 
     // Todo: Slack에 메시지 전달
 
+    log.info('Result:')
+    log.green(tx);
   });
 
-  reqQueue.on('failed', (job, err) =>{
-    // Todo: DB에 상태를 업데이트하기 위해서 API를 호출한다.
-
+  reqQueue.on('failed', async (job, err) =>{
+    // DB에 상태를 업데이트하기 위해서 API를 호출한다.
+    await writeError(job.data.dbid, err.message);
     // Todo: Slack에 메시지 전달
+
     log.red(job.data);
     log.red(err);
   });

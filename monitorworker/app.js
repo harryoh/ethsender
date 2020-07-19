@@ -1,16 +1,22 @@
-const Queue = require('bull');
+const Queue = require('bull'),
+      Web3 = require('web3'),
+      axios = require('axios'),
+      log = require('ololog').configure({ time: true });
 
+require ('ansicolor').nice
 const config = require('./environment');
+
+const STATUS = {
+  EMPTY: 0,
+  PREPARE: 1,
+  PENDING: 2,
+  COMPLETE: 3,
+  ERROR: 5
+};
 
 const REDIS_URL = `redis://${config.REDIS_HOST}:${config.REDIS_PORT}`;
 const queueNames = ['PendingTx'];
-
 const txQueue = new Queue(queueNames[0], REDIS_URL);
-
-const Web3 = require('web3');
-const axios = require('axios');
-const log = require('ololog').configure({ time: true });
-require ('ansicolor').nice
 
 log.info('\n--Start MonitorWorker--\n'.blue);
 
@@ -44,18 +50,34 @@ const isConnected = async (ep) => {
 };
 
 const initJob = async () => {
-  // Job Clear, Read txs from database, Add Queue
+  // Todo: Job Clear, Read txs from database, Add Queue
+};
+
+const updateRequest = async (body) => {
+  let tzDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
+  body.modifiedAt = tzDate.toISOString().slice(0, 19).replace('T', ' ');
+  return await axios.put(
+    `${config.NODESERVER_URL}/api/tx/${body.txid}`,
+    body);
 };
 
 const txSuccess = async (tx) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!tx.blockNumber) {
       return reject(new Error(`Transaction(${tx.hash}) is not blocked!`));
     }
     log.info(`Transaction(${tx.hash}) was confirmed!(BlockNumber: ${tx.blockNumber})`);
-    setTimeout(() => {
-      resolve('SUCCESS');
-    }, 3000);
+
+    try {
+      await updateRequest({
+        txid: tx.hash,
+        status: STATUS.COMPLETE,
+        memo: `blockNumber: ${tx.blockNumber}`
+      });
+    } catch(err) {
+      reject(err);
+    };
+    resolve(tx);
   });
 };
 

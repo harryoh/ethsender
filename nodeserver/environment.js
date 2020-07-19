@@ -3,7 +3,7 @@ const environment = {
     REDIS_PORT: process.env.REDIS_PORT || 6379,
     REDIS_HOST: process.env.REDIS_HOST || 'redis',
     DB: {
-      host: 'localhost',
+      host: 'db',
       port: 3306,
       user: 'root',
       password: 'willsoft0780!@',

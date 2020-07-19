@@ -4,6 +4,7 @@ const environment = {
     REDIS_HOST: process.env.REDIS_HOST || 'redis',
     INFURA_ACCESS_TOKEN: process.env.INFURA_ACCESS_TOKEN || 'fdc0ff2dab784f86a794b4ec72f73e36',
     GASPRICE_GET_SECONDS: 3600,
+    NODESERVER_URL: 'http://nodeserver:50080'
   },
   development: {
     CHAIN: 'ropsten',
