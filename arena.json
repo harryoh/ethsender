@@ -1,0 +1,19 @@
+{
+  "queues": [
+    {
+      "name": "RequestTx",
+      "hostId": "redis",
+      "redis": {
+        "port": 6379,
+        "host": "redis"
+      }
+    }, {
+      "name": "PendingTx",
+      "hostId": "redis",
+      "redis": {
+        "port": 6379,
+        "host": "redis"
+      }
+    }
+  ]
+}

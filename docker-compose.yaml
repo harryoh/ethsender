@@ -29,6 +29,16 @@ services:
       - redis
       - db
 
+  arena:
+    restart: always
+    image: mixmaxhq/arena:latest
+    volumes:
+      - ./arena.json:/opt/arena/src/server/config/index.json
+    ports:
+      - "4567:4567"
+    depends_on:
+      - redis
+
   transferworker:
     restart: always
     build:

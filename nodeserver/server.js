@@ -4,8 +4,7 @@ const express = require('express'),
       mariadb = require('mariadb'),
       bodyParser = require('body-parser'),
       morgan = require('morgan'),
-      Queue = require('bull'),
-      Arena = require('bull-arena');
+      Queue = require('bull');
 
 const config = require('./environment');
 
@@ -240,22 +239,6 @@ router.route('/tx/:hash')
 });
 
 app.use('/api', router);
-
-const arena = Arena({
-  queues: queueNames.map(q => ({
-      name: q,
-      hostId: 'redis',
-      redis: {
-        port: config.REDIS_PORT,
-        host: config.REDIS_HOST
-      }
-  })),
-}, {
-  basePath: '/arena',
-  disableListen: true
-});
-
-app.use('/', arena);
 
 var server = app.listen( port, () => {
   console.log('Listening on port ' + server.address().port);
