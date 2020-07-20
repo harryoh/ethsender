@@ -29,6 +29,9 @@ if (!config.INFURA_ACCESS_TOKEN) {
   process.exit(1);
 }
 
+// const endpoint = `${config.ETH_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
+// const web3 = new Web3(new Web3.providers.HttpProvider(endpoint));
+
 const endpoint = `${config.ETH_WS_ENDPOINT}/${config.INFURA_ACCESS_TOKEN}`;
 const web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
 
@@ -211,7 +214,7 @@ const main = async () => {
     });
 
     // Transaction을 pendingTx Queue에 넣어 MonitorWorker가 상태를 감시할 수 있도록 한다.
-    txJob = await txQueue.add(tx);
+    await txQueue.add(tx);
 
     // Todo: Slack에 메시지 전달
 

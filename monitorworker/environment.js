@@ -3,7 +3,8 @@ const environment = {
     REDIS_PORT: process.env.REDIS_PORT || 6379,
     REDIS_HOST: process.env.REDIS_HOST || 'redis',
     INFURA_ACCESS_TOKEN: process.env.INFURA_ACCESS_TOKEN || 'fdc0ff2dab784f86a794b4ec72f73e36',
-    NODESERVER_URL: 'http://nodeserver:50080'
+    NODESERVER_URL: 'http://nodeserver:50080',
+    QUEUE_RELOAD_SECONDS: 3600
   },
   development: {
     CHAIN: 'ropsten',

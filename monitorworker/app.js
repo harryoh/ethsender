@@ -49,13 +49,13 @@ const isConnected = async (ep) => {
   }
 };
 
-const initJob = async () => {
-  // Todo: Job Clear, Read txs from database, Add Queue
+const getDataTime = () => {
+  let tzDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
+  return tzDate.toISOString().slice(0, 19).replace('T', ' ');
 };
 
 const updateRequest = async (body) => {
-  let tzDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
-  body.modifiedAt = tzDate.toISOString().slice(0, 19).replace('T', ' ');
+  // body.modifiedAt = getDataTime();
   return await axios.put(
     `${config.NODESERVER_URL}/api/tx/${body.txid}`,
     body);
@@ -63,7 +63,7 @@ const updateRequest = async (body) => {
 
 const txSuccess = async (tx) => {
   return new Promise(async (resolve, reject) => {
-    if (!tx.blockNumber) {
+    if (!tx || !tx.blockNumber) {
       return reject(new Error(`Transaction(${tx.hash}) is not blocked!`));
     }
     log.info(`Transaction(${tx.hash}) was confirmed!(BlockNumber: ${tx.blockNumber})`);
@@ -72,7 +72,8 @@ const txSuccess = async (tx) => {
       await updateRequest({
         txid: tx.hash,
         status: STATUS.COMPLETE,
-        memo: `blockNumber: ${tx.blockNumber}`
+        memo: `blockNumber: ${tx.blockNumber}`,
+        completedAt: getDataTime()
       });
     } catch(err) {
       reject(err);
@@ -90,12 +91,11 @@ const monitorJob = async (job, done) => {
       return done(new Error(`{ error: ${errmsg} }`));
     }
   }
-  const txn = await web3.eth.getTransaction(job.data.txid)
-  if (txn.blockNumber) {
+  const txn = await web3.eth.getTransaction(job.data.txid);
+  if (txn && txn.blockNumber) {
     try {
       await txSuccess(txn);
     } catch (error) {
-      log.error(error);
       return done(error);
     }
     return done();
@@ -109,7 +109,7 @@ const monitorJob = async (job, done) => {
   subscription.on('data', async (blockHeader) => {
     log.info(`A new block was generated!(${blockHeader.number})`);
     const tx = await web3.eth.getTransaction(job.data.txid)
-    if (tx.blockNumber) {
+    if (tx && tx.blockNumber) {
       try {
         await txSuccess(tx);
       } catch (error) {
@@ -126,6 +126,25 @@ const monitorJob = async (job, done) => {
   });
 };
 
+const initJob = async () => {
+  try {
+    let res = await axios.get(`${config.NODESERVER_URL}/api/tx/pending`);
+    await txQueue.empty();
+
+    for (let i=0; i < res.data.length; i++) {
+      await txQueue.add({
+        txid: res.data[i].txid,
+        dbid: res.data[i].no,
+        fromAddress: res.data[i].from_address,
+        toAddress: res.data[i].to_address,
+        value: res.data[i].coin
+      });
+    }
+  } catch(err) {
+    log.error(err);
+  }
+};
+
 const main = async () => {
   if (!await isConnected()) {
     log.error(`Connection error with infura.(${endpoint})`.red);
@@ -134,9 +153,12 @@ const main = async () => {
   log.info('Connection is Successed.');
 
   await initJob();
-
   log.info('\nStart watching pendingTx Queue...'.blue);
   txQueue.process(monitorJob);
+
+  if (config.QUEUE_RELOAD_SECONDS > 0) {
+    setInterval(initJob, config.QUEUE_RELOAD_SECONDS*1000);
+  }
 }
 
 main();
