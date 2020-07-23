@@ -76,7 +76,7 @@ const isConnected = async (ep) => {
 */
 const getPrivateKey = () => {
   return Buffer.from(
-    '576F60A09716DEAFD8AB1D477CAFD28453C74A995ED46CCB046D0EC1903500F8',
+    config.PRIVATE_KEY,
     'hex',
   );
 };

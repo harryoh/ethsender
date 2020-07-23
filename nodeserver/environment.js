@@ -5,9 +5,9 @@ const environment = {
     DB: {
       host: 'db',
       port: 3306,
-      user: 'root',
-      password: 'willsoft0780!@',
-      database: 'oneethernet'
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE
     }
   },
   development: {

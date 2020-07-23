@@ -4,6 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "dev": "node node_modules/nodemon/bin/nodemon app"
   },
   "dependencies": {

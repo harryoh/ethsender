@@ -20,9 +20,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile-nodeserver
-    command: ["/usr/local/bin/npm", "run", "dev",]
+    # command: ["/usr/local/bin/npm", "run", "dev"]
+    command: ["pm2-runtime", "server.js"]
     volumes:
       - ./nodeserver/:/usr/src/app/
+    env_file:
+      - '.env'
     ports:
       - "50080:50080"
     depends_on:
@@ -34,6 +37,8 @@ services:
     image: mixmaxhq/arena:latest
     volumes:
       - ./arena.json:/opt/arena/src/server/config/index.json
+    env_file:
+      - '.env'
     ports:
       - "4567:4567"
     depends_on:
@@ -44,9 +49,12 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile-transferworker
-    command: ["/usr/local/bin/npm", "run", "dev",]
+    # command: ["/usr/local/bin/npm", "run", "dev"]
+    command: ["pm2-runtime", "app.js"]
     volumes:
       - ./transferworker/:/usr/src/app/
+    env_file:
+      - '.env'
     depends_on:
       - nodeserver
 
@@ -55,8 +63,11 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile-monitorworker
-    command: ["/usr/local/bin/npm", "run", "dev",]
+    # command: ["/usr/local/bin/npm", "run", "dev"]
+    command: ["pm2-runtime", "app.js"]
     volumes:
       - ./monitorworker/:/usr/src/app/
+    env_file:
+      - '.env'
     depends_on:
       - nodeserver
