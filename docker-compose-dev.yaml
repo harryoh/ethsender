@@ -4,17 +4,27 @@ services:
   redis:
     restart: always
     image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  db:
+    restart: always
+    image: mariadb:5.5.64
+    env_file:
+      - '.env-dev'
+    ports:
+      - "3306:3306"
 
   nodeserver:
     restart: always
     build:
       context: .
       dockerfile: docker/Dockerfile-nodeserver
-    command: ["pm2-runtime", "server.js"]
+    command: ["/usr/local/bin/npm", "run", "dev"]
     volumes:
       - ./nodeserver/:/usr/src/app/
     env_file:
-      - '.env'
+      - '.env-dev'
     ports:
       - "50080:50080"
     depends_on:
@@ -27,7 +37,7 @@ services:
     volumes:
       - ./arena.json:/opt/arena/src/server/config/index.json
     env_file:
-      - '.env'
+      - '.env-dev'
     ports:
       - "4567:4567"
     depends_on:
@@ -42,7 +52,7 @@ services:
     volumes:
       - ./transferworker/:/usr/src/app/
     env_file:
-      - '.env'
+      - '.env-dev'
     depends_on:
       - nodeserver
 
@@ -55,6 +65,6 @@ services:
     volumes:
       - ./monitorworker/:/usr/src/app/
     env_file:
-      - '.env'
+      - '.env-dev'
     depends_on:
       - nodeserver

@@ -3,8 +3,8 @@ const environment = {
     REDIS_PORT: process.env.REDIS_PORT || 6379,
     REDIS_HOST: process.env.REDIS_HOST || 'redis',
     DB: {
-      host: 'db',
-      port: 3306,
+      host: process.env.MYSQL_DB_HOST,
+      port: process.env.MYSQL_DB_PORT,
       user: process.env.MYSQL_USER,
       password: process.env.MYSQL_PASSWORD,
       database: process.env.MYSQL_DATABASE

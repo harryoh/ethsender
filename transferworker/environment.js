@@ -11,14 +11,14 @@ const environment = {
     ETH_ENDPOINT: 'https://ropsten.infura.io/v3',
     ETH_WS_ENDPOINT: 'wss://ropsten.infura.io/ws/v3',
     FEE_LEVEL: 'high',
-    PRIVATE_KEY: process.env.PRIVATE_KEY_DEV
+    PRIVATE_KEY: process.env.PRIVATE_KEY
   },
   production: {
     CHAIN: 'mainnet',
     ETH_ENDPOINT: 'https://mainnet.infura.io/v3',
     ETH_WS_ENDPOINT: 'wss://mainnet.infura.io/ws/v3',
     FEE_LEVEL: 'low',
-    PRIVATE_KEY: process.env.PRIVATE_KEY_PROD
+    PRIVATE_KEY: process.env.PRIVATE_KEY
   }
 }
 

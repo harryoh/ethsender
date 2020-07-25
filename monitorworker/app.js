@@ -35,7 +35,8 @@ const web3 = new Web3(new Web3.providers.WebsocketProvider(endpoint));
 log.info(`Ethereum Endpoint is ${endpoint}`);
 
 /*
-* Eth Node와 연결이 되어 있는지 확인
+* Ether Node와 연결이 되어 있는지 확인
+* 연결이 안되어 있으면 다시 한번 연결
 */
 const isConnected = async (ep) => {
   let connected = false;
@@ -49,11 +50,13 @@ const isConnected = async (ep) => {
   }
 };
 
+// DB에 시간을 저장할 때에 Timezone이 적용되어 있는 시간을 저장
 const getDataTime = () => {
   let tzDate = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000));
   return tzDate.toISOString().slice(0, 19).replace('T', ' ');
 };
 
+// TX의 상태값을 변경
 const updateRequest = async (body) => {
   // body.modifiedAt = getDataTime();
   return await axios.put(
@@ -61,6 +64,7 @@ const updateRequest = async (body) => {
     body);
 };
 
+// Transaction이 Confirm이 났을때 처리
 const txSuccess = async (tx) => {
   return new Promise(async (resolve, reject) => {
     if (!tx || !tx.blockNumber) {
@@ -91,6 +95,8 @@ const monitorJob = async (job, done) => {
       return done(new Error(`{ error: ${errmsg} }`));
     }
   }
+
+  // 감시할 TX가 들어왔을 때, 먼저 해당 TX의 상태를 확인하고 만약 이미 Block에 포함되었다면 바로 처리
   const txn = await web3.eth.getTransaction(job.data.txid);
   if (txn && txn.blockNumber) {
     try {
@@ -101,6 +107,7 @@ const monitorJob = async (job, done) => {
     return done();
   }
 
+  // 새로운 블록이 들어왔을때에 실행
   const subscription = web3.eth.subscribe('newBlockHeaders')
   subscription.on("error", (error) => {
     log.error(error);
@@ -108,6 +115,8 @@ const monitorJob = async (job, done) => {
   });
   subscription.on('data', async (blockHeader) => {
     log.info(`A new block was generated!(${blockHeader.number})`);
+
+    // 새로운 Block에 감시할 TX가 포함되었는지 확인
     const tx = await web3.eth.getTransaction(job.data.txid)
     if (tx && tx.blockNumber) {
       try {
@@ -126,7 +135,10 @@ const monitorJob = async (job, done) => {
   });
 };
 
+// Job을 초기화하고 Pending중인 TX의 정보를 가져와서 Queue에 넣는다.
+// DB와 Queue간에 잘못된 정보가 존재할 경우 이로써 싱크를 맞춘다.
 const initJob = async () => {
+  log.info('Initialing Tx Monitoring Jobs...');
   try {
     let res = await axios.get(`${config.NODESERVER_URL}/api/tx/pending`);
     await txQueue.empty();
@@ -156,6 +168,7 @@ const main = async () => {
   log.info('\nStart watching pendingTx Queue...'.blue);
   txQueue.process(monitorJob);
 
+  // 주기적으로 initJob을 호출하여 문제의 여지를 해결함.
   if (config.QUEUE_RELOAD_SECONDS > 0) {
     setInterval(initJob, config.QUEUE_RELOAD_SECONDS*1000);
   }
