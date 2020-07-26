@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 
 COPY monitorworker/package*.json ./
 
-RUN apk add tzdata
+RUN apk add python3 tzdata make g++
 RUN npm install -g pm2 && npm install
 
 COPY ./monitorworker/ .
