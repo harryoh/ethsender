@@ -19,7 +19,6 @@ services:
       - "50080:50080"
     depends_on:
       - redis
-      - db
 
   arena:
     restart: always
