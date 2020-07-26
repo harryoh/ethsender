@@ -22,7 +22,7 @@ services:
       dockerfile: docker/Dockerfile-nodeserver
     command: ["/usr/local/bin/npm", "run", "dev"]
     volumes:
-      - ./nodeserver/:/usr/src/app/
+      - ./nodeserver/server.js:/usr/src/app/server.js
     env_file:
       - '.env-dev'
     ports:
@@ -50,7 +50,7 @@ services:
       dockerfile: docker/Dockerfile-transferworker
     command: ["pm2-runtime", "app.js"]
     volumes:
-      - ./transferworker/:/usr/src/app/
+      - ./transferworker/app.js:/usr/src/app/app.js
     env_file:
       - '.env-dev'
     depends_on:
@@ -63,7 +63,7 @@ services:
       dockerfile: docker/Dockerfile-monitorworker
     command: ["pm2-runtime", "app.js"]
     volumes:
-      - ./monitorworker/:/usr/src/app/
+      - ./monitorworker/app.js:/usr/src/app/app.js
     env_file:
       - '.env-dev'
     depends_on:
