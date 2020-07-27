@@ -39,7 +39,7 @@ EXIT;
 
 **wallet_send_list**
 
-```
+```sql
 create table wallet_send_list
 (
     no            int auto_increment comment 'Row' primary key,
@@ -74,7 +74,7 @@ create index wallet_send_list_txid_status_index
 따라서 같은 컴퓨터에서 접속하는데에는 문제가 없지만 외부에서 접속할 경우에는 자칫 크게 위험할 수도 있습니다.
 따라서 Host Machine에서는 접속이 가능하지만 외부 요청에는 접속할 수 없도록 `iptables`를 이용하여 막습니다.
 
-```
+```bash
 yum install iptables-services
 
 iptables -I DOCKER-USER -p tcp -m tcp --dport 50080 -j DROP
@@ -123,7 +123,7 @@ systemctl restart iptables
 
 `env.sample `파일을 `.env` 로 복사합니다.
 
-```
+```bash
 cp env.sampl.e .env
 ```
 
@@ -135,7 +135,7 @@ cp env.sampl.e .env
 
 **.env** 예제
 
-```
+```ini
 NODE_ENV=production
 
 MYSQL_DB_HOST=172.17.0.1
