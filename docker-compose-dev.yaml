@@ -48,7 +48,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile-transferworker
-    command: ["pm2-runtime", "app.js"]
+    command: ["/usr/local/bin/npm", "run", "dev"]
     volumes:
       - ./transferworker/app.js:/usr/src/app/app.js
     env_file:
@@ -61,7 +61,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile-monitorworker
-    command: ["pm2-runtime", "app.js"]
+    command: ["/usr/local/bin/npm", "run", "dev"]
     volumes:
       - ./monitorworker/app.js:/usr/src/app/app.js
     env_file:
